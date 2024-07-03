@@ -1,29 +1,29 @@
-function Set-TamperProtection {
+function Set-PSSophosCentralTamperProtection {
     <#
     .SYNOPSIS
     Uses the Sophos API for endpoints to set tamper protection on or off
-    
+
     .DESCRIPTION
     Long description
-    
+
     .PARAMETER dataregion
     Data region to be included in the URI of thhe HTTPS request,
-    
+
     .PARAMETER tenantID
     Used for authentication and in the request headers
-    
+
     .PARAMETER token
     Needed for authorization
-    
+
     .PARAMETER id
     Device ID for a specific endpoint (Computer)
-    
+
     .PARAMETER enable
     Boolean value to enable or disabletamper protection
-    
+
     .EXAMPLE
-    Set-TamperProtection -dataregion $dataregion -tenantID $TenantId -token $token -enable:$false -id '8e72b84b-20df-4603-ba05-fba3a9fe27b8'
-    
+    Set-PSSophosCentralTamperProtection -dataregion $dataregion -tenantID $TenantId -token $token -enable:$false -id '8e72b84b-20df-4603-ba05-fba3a9fe27b8'
+
     .NOTES
     General notes
     #>
@@ -55,7 +55,7 @@ function Set-TamperProtection {
         [bool]
         $enable = $true
     )
-    
+
     begin {
         #region begin
         Write-Verbose "[BEGIN ] Starting: $($MyInvocation.Mycommand)"
@@ -72,7 +72,7 @@ function Set-TamperProtection {
         Write-Verbose "[BEGIN ] $body"
         #endregion
     } #begin
-    
+
     process {
         #region process
         foreach ($item in $id) {
@@ -84,7 +84,7 @@ function Set-TamperProtection {
         switch ($enable) {
             $false { $operation = "Disabling tamper protection" }
             default { $operation = "Enabling tamper protection" }
-        } #switch        
+        } #switch
 
         if ($pscmdlet.ShouldProcess($item,$operation)) {
 
@@ -96,10 +96,10 @@ function Set-TamperProtection {
     }
         #endregion
     } #process
-    
+
     end {
 
         Write-Verbose "[END ] Ending: $($MyInvocation.Mycommand)"
-        
+
     } #end
-} #Set-TamperProtection function 
+} #Set-PSSophosCentralTamperProtection function
