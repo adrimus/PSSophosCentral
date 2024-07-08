@@ -30,7 +30,7 @@ function Connect-PSSophosCentral {
     #>
     [CmdletBinding()]
 
-    [OutputType(PSCustomObject)]
+    [OutputType([PSCustomObject])]
 
     param (
         # Parameter help description
