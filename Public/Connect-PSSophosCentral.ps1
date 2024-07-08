@@ -30,7 +30,7 @@ function Connect-PSSophosCentral {
     #>
     [CmdletBinding()]
 
-    [OutputType([PSCustomObject])]
+    [OutputType([string])]
 
     param (
         # Parameter help description
@@ -46,8 +46,25 @@ function Connect-PSSophosCentral {
     process {
         $body = "grant_type=client_credentials&scope=token&client_id=$clientid&client_secret=$clientsecret"
         $headers = @{"Content-Type" = "application/x-www-form-urlencoded" }
-        $response = Invoke-RestMethod -Uri 'https://id.sophos.com/api/v2/oauth2/token' -Method 'POST' -Headers $headers -Body $body
-        $response
+
+        try {
+            $response = Invoke-RestMethod -Uri 'https://id.sophos.com/api/v2/oauth2/token' -Method 'POST' -Headers $headers -Body $body
+        } catch {
+            throw $_.exception.message
+        } #try/catch
+
+        #Get the Tenant ID and Data Region
+        $data = Get-PSSophosCentralContext -token $response.access_token
+
+        # The response from the above command need to be available for subsequent API calls
+        $script:token = $response.access_token
+        $script:TenantId = $data.TenantId
+        $script:DataRegion = $data.dataRegion
+
+        Write-Verbose "`$Script:DataRegion: [$script:DataRegion]"
+
+        Write-Output "Connection Successful"
+
     } #process
 
 } #Connect-PSSophosCentral function
