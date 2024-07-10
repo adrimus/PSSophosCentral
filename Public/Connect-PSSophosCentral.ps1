@@ -22,7 +22,7 @@ function Connect-PSSophosCentral {
     $clientsecret = Get-Secret -Name TamperProtection-Secret -AsPlainText
 
     # Save response to a variable to get region and tenantID with Get-SophosCentralContext
-    $response = Connect-PSSophosCentral -clientid $clientid -clientsecret $clientsecret
+    Connect-PSSophosCentral -clientid $clientid -clientsecret $clientsecret
 
     Connect to Sophos Central using credentials from SecretManagement
     .NOTES
