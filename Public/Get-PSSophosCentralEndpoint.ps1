@@ -5,9 +5,14 @@ function Get-PSSophosCentralEndpoint {
 
     .DESCRIPTION
     Uses the endpoint API to get information on an endpoint based on ID. This command needs the tenant ID and JWT for the header information.
+    You can specify the Device ID which will directly added to the URI.
+    If you specify the Computername, the function will use Get-PSSophosCentralAllEndpoints to create a hashtable to beable to search for the Device ID using the Computername
 
     .EXAMPLE
-    Get-PSSophosCentralEndpoint
+    Get-PSSophosCentralEndpoint -computername LAPTGS012-GRY7JG3
+
+    .EXAMPLE
+    Get-PSSophosCentralEndpoint -DeviceId ffc1ceb4-c046-44cd-a9e5-312096658c0b -ba
 
     .NOTES
     The Data Region and Tenant ID should be available in the Script scope from the Connect-PSSophosCentral
@@ -16,36 +21,49 @@ function Get-PSSophosCentralEndpoint {
     https://developer.sophos.com/docs/endpoint-v1/1/routes/endpoints/%7BendpointId%7D/get
     https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/invoke-restmethod?view=powershell-7.4
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Basic")]
+    [OutputType([PSCustomObject])]
     param (
         # The ID of the device in Sophos Central
-        [Parameter(Mandatory = $true, ParameterSetName = 'SearchById')]
+        [Parameter(ParameterSetName = 'endpointId', Mandatory = $true)]
         [string]
-        [Alias("DeviceId")]
+        [Alias("Id")]
         $endpointId,
 
-        [Parameter(Mandatory = $true, ParameterSetName = 'SearchbyName')]
+        [Parameter(ParameterSetName = 'computername', Mandatory = $true)]
         [string]
         [Alias("Hostname")]
         $computername,
 
-        # Basic view to be returned in response
-        [Parameter(Mandatory = $false)]
-        [switch]
-        $Basic,
+        [Parameter(ParameterSetName = 'Full')]
+        [Parameter(ParameterSetName = 'computername')]
+        [Parameter(ParameterSetName = 'endpointId')]
+        [switch]$Full,
 
-        # Summary view to be returned in response
-        [Parameter(Mandatory = $false)]
-        [switch]
-        $Summary,
+        [Parameter(ParameterSetName = 'Summary')]
+        [Parameter(ParameterSetName = 'computername')]
+        [Parameter(ParameterSetName = 'endpointId')]
+        [switch]$Summary,
 
-        # Full view to be returned in response
-        [Parameter(Mandatory = $false)]
-        [switch]
-        $Full
+        [Parameter(ParameterSetName = 'Basic')]
+        [Parameter(ParameterSetName = 'computername')]
+        [Parameter(ParameterSetName = 'endpointId')]
+        [switch]$Basic
     )
 
     begin {
+        #region check
+
+        # Check if connected to Sophos Central
+        Write-Verbose "[$script:tenantid]"
+        Write-Verbose "[$script:dataregion]"
+
+        if (-not ($script:token)) {
+            throw "Authentication needed. Please call Connect-PSSophosCentral."
+        }
+
+        #endregion
+
         #region Header
         Write-Verbose "[BEGIN ] Starting: $($MyInvocation.Mycommand)"
         $headers = @{
@@ -72,21 +90,17 @@ function Get-PSSophosCentralEndpoint {
 
             try {
 
-                $forEachObjectSplat = @{
-                    Process = {
-                        if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
+                Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
+                    if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
 
-                            Write-Verbose "$($Endpoint.ComputerName) has a duplicate entry"
+                        Write-Verbose "$($Endpoint.ComputerName) has a duplicate entry"
 
-                        } else {
+                    } else {
 
-                            $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint.DeviceId )
+                        $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint.DeviceId )
 
-                        } #if/else
-                    } #process
-                } #forEachObjectSplat
-
-                Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object @forEachObjectSplat
+                    } #if/else
+                } #Get-PSSophosCentralAllEndpoints
 
             } catch {
 
@@ -106,20 +120,47 @@ function Get-PSSophosCentralEndpoint {
         if ($PSBoundParameters.ContainsKey("computername")) {
 
             $endpointId = $itemsHashtable[$computername]
+            Write-Verbose "endpoint id: [$endpointId]"
+
+            if ("" -eq $endpointId) {
+                throw "$computername not found"
+            } #if
 
         } #if
+
+        #endregion
+
+        #region view
+
+        Switch ($PSCmdlet.ParameterSetName) {
+            "Full" {$query = "?view=full"}
+            "Basic" {$query = "?view=Basic"}
+            "Summary" {$query = "?view=Summary"}
+
+            } #switch
 
         #endregion
 
         #region API request
 
         $url = "{0}/endpoint/v1/endpoints/{1}" -f $script:dataregion, $endpointId
+
+        # Add view query to the request if specified
+        if ($query) {
+            $url = $url + $query
+        } #if
         Write-Verbose "URI: [$url]"
         Write-Verbose "Dataregion [$($script:dataregion)]"
 
         try {
 
-            Invoke-RestMethod -Uri $url -Method GET -Headers $headers
+            $invokeRestMethodSplat = @{
+                Uri = $url
+                Method = 'GET'
+                Headers = $headers
+            }
+
+            Invoke-RestMethod @invokeRestMethodSplat
 
         }
         catch {
