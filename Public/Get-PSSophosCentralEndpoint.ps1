@@ -30,7 +30,7 @@ function Get-PSSophosCentralEndpoint {
         [Alias("Id")]
         $endpointId,
 
-        [Parameter(ParameterSetName = 'computername', Mandatory = $true)]
+        [Parameter(ParameterSetName = 'computername', Mandatory = $true, ValueFromPipeline)]
         [string]
         [Alias("Hostname")]
         $computername,
@@ -74,102 +74,95 @@ function Get-PSSophosCentralEndpoint {
         #endregion
 
         # Cache Hostname and DeviceIDs to search through later
-        if ($PSBoundParameters.ContainsKey("computername")) {
 
-            Write-Verbose "Hostname Parameter Specified"
+        #region hashtable
 
-            #region hashtable
+        #Output parameters
+        $PSBoundParameters.Keys | ForEach-Object {
+            $message = 'Key: {0}, Value: {1}' -f $_, $PSBoundParameters[$_]
+            Write-Verbose $message
+        }
 
-            #Output parameters
-            $PSBoundParameters.Keys | ForEach-Object {
-                $message = 'Key: {0}, Value: {1}' -f $_, $PSBoundParameters[$_]
-                Write-Verbose $message
-            }
-
-            [hashtable]$itemsHashtable = @{}
-
-            try {
-
-                Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
-                    if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
-
-                        Write-Verbose "$($Endpoint.ComputerName) has a duplicate entry"
-
-                    } else {
-
-                        $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint.DeviceId )
-
-                    } #if/else
-                } #Get-PSSophosCentralAllEndpoints
-
-            } catch {
-
-                Throw $_.exception.message
-
-            } #try/catch
-
-            #endregion
-
-        } #if
-
-    } #begin
-
-    process {
-        #region Get EndpointID
-
-        if ($PSBoundParameters.ContainsKey("computername")) {
-
-            $endpointId = $itemsHashtable[$computername]
-            Write-Verbose "endpoint id: [$endpointId]"
-
-            if ("" -eq $endpointId) {
-                throw "$computername not found"
-            } #if
-
-        } #if
-
-        #endregion
-
-        #region view
-
-        Switch ($PSCmdlet.ParameterSetName) {
-            "Full" {$query = "?view=full"}
-            "Basic" {$query = "?view=Basic"}
-            "Summary" {$query = "?view=Summary"}
-
-            } #switch
-
-        #endregion
-
-        #region API request
-
-        $url = "{0}/endpoint/v1/endpoints/{1}" -f $script:dataregion, $endpointId
-
-        # Add view query to the request if specified
-        if ($query) {
-            $url = $url + $query
-        } #if
-        Write-Verbose "URI: [$url]"
-        Write-Verbose "Dataregion [$($script:dataregion)]"
+        [hashtable]$itemsHashtable = @{}
 
         try {
 
-            $invokeRestMethodSplat = @{
-                Uri = $url
-                Method = 'GET'
-                Headers = $headers
-            }
+            Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
+                if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
 
-            Invoke-RestMethod @invokeRestMethodSplat
+                    Write-warning "$($Endpoint.ComputerName) has a duplicate entry"
+
+                }
+                else {
+
+                    $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint.DeviceId )
+
+                } #if/else
+            } #Get-PSSophosCentralAllEndpoints
 
         }
         catch {
 
-            write-error "Error with request: [$_]"
+            Throw $_.exception.message
 
         } #try/catch
 
         #endregion
+
+    } #begin
+
+    process {
+        Write-Verbose "[PROCESS] Starting: $($MyInvocation.Mycommand)"
+        try {
+            #region Get EndpointID
+
+            if ($PSBoundParameters.ContainsKey("computername")) {
+
+                write-verbose "Getting ID for [$computername]"
+                $endpointId = $itemsHashtable[$computername]
+                Write-Verbose "endpoint id: [$endpointId]"
+
+            } #if
+
+            #endregion
+
+            #region view
+
+            Switch ($PSCmdlet.ParameterSetName) {
+                "Full" { $query = "?view=full" }
+                "Basic" { $query = "?view=Basic" }
+                "Summary" { $query = "?view=Summary" }
+
+            } #switch
+
+            #endregion
+
+            #region API request
+
+            $url = "{0}/endpoint/v1/endpoints/{1}" -f $script:dataregion, $endpointId
+
+            # Add view query to the request if specified
+            if ($query) {
+                $url = $url + $query
+            } #if
+            Write-Verbose "URI: [$url]"
+            Write-Verbose "Dataregion [$($script:dataregion)]"
+
+            $invokeRestMethodSplat = @{
+                Uri     = $url
+                Method  = 'GET'
+                Headers = $headers
+            }
+
+            Invoke-RestMethod @invokeRestMethodSplat
+            #endregion
+        }
+        catch {
+
+            write-error "Error with request: [$_]"
+            $PSCmdlet.ThrowTerminatingError($PSItem)
+
+        } #try/catch
 
     } #process
 
