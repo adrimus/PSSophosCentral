@@ -29,31 +29,18 @@ function Set-PSSophosCentralTamperProtection {
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param (
-        # Data region to be included in the URI of thhe HTTPS request
-        [Parameter(Mandatory = $true)]
-        [string]
-        $dataregion,
-
-        # TenantID for the header
-        [Parameter(Mandatory = $true)]
-        [string]
-        $tenantID,
-
-        # Used in the uri request header
-        [Parameter(mandatory = $true)]
-        [string]
-        $token,
 
         # Endpoint ID
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [string[]]
-        [Alias("id")]
-        $DeviceId,
+        [Alias("Id")]
+        $endpointId,
 
         # Parameter help description
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [bool]
-        $enable = $true
+        [alias("Enable")]
+        $IsEnabled
     )
 
     begin {
@@ -75,25 +62,37 @@ function Set-PSSophosCentralTamperProtection {
 
     process {
         #region process
-        foreach ($item in $id) {
+        foreach ($Id in $endpointId) {
 
-        $url = "$dataregion/endpoint/v1/endpoints/$item/tamper-protection"
-        Write-Verbose "[PROCESS] URL [$url]"
+            $url = "$dataregion/endpoint/v1/endpoints/$Id/tamper-protection"
+            Write-Verbose "[PROCESS] URL [$url]"
 
-        # set message to display in the what if message
-        switch ($enable) {
-            $false { $operation = "Disabling tamper protection" }
-            default { $operation = "Enabling tamper protection" }
-        } #switch
+            # set message to display in the what if message
+            switch ($enable) {
+                $false { $operation = "Disabling tamper protection" }
+                default { $operation = "Enabling tamper protection" }
+            } #switch
 
-        if ($pscmdlet.ShouldProcess($item,$operation)) {
+            # Check device name
+            try {
 
-            $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType "application/json"
-            Write-Verbose "[PROCESS] response:  [$response]"
-            $response
+                $device = Get-PSSophosCentralEndpoint -endpointid $Id
 
-        } #if
-    }
+            }
+            catch {
+
+                Throw $_.exception.message
+
+            } #try/catch
+
+            if ($pscmdlet.ShouldProcess($device.hostname, $operation)) {
+
+                $response = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType "application/json"
+                Write-Verbose "[PROCESS] response:  [$response]"
+                $response
+
+            } #if
+        }
         #endregion
     } #process
 
