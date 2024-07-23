@@ -85,6 +85,8 @@ function Get-PSSophosCentralEndpoint {
 
         if (-not $itemsHashtable) {
 
+            Write-Verbose "Creating cache of Endpoint IDs"
+
             [hashtable]$itemsHashtable = @{}
 
             try {
@@ -173,8 +175,7 @@ function Get-PSSophosCentralEndpoint {
         }
         catch {
 
-            write-error "Error with request: [$_]"
-            $PSCmdlet.ThrowTerminatingError($PSItem)
+            write-error "Error with request: [$($_.message)]"
 
         } #try/catch
 
