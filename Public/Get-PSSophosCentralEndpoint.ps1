@@ -9,10 +9,10 @@ function Get-PSSophosCentralEndpoint {
     If you specify the Computername, the function will use Get-PSSophosCentralAllEndpoints to create a hashtable to beable to search for the Device ID using the Computername
 
     .EXAMPLE
-    Get-PSSophosCentralEndpoint -computername LAPTGS012-GRY7JG3
+    Get-PSSophosCentralEndpoint -computername LAP001
 
     .EXAMPLE
-    Get-PSSophosCentralEndpoint -DeviceId ffc1ceb4-c046-44cd-a9e5-312096658c0b -ba
+    Get-PSSophosCentralEndpoint -DeviceId ffc1ceb4-c046-44cd-a9e5-312asf6658c0b
 
     .NOTES
     The Data Region and Tenant ID should be available in the Script scope from the Connect-PSSophosCentral
@@ -31,7 +31,7 @@ function Get-PSSophosCentralEndpoint {
         $endpointId,
 
         [Parameter(ParameterSetName = 'computername', Mandatory = $true, ValueFromPipeline)]
-        [string]
+        [string[]]
         [Alias("Hostname")]
         $computername,
 
@@ -83,29 +83,33 @@ function Get-PSSophosCentralEndpoint {
             Write-Verbose $message
         }
 
-        [hashtable]$itemsHashtable = @{}
+        if (-not $itemsHashtable) {
 
-        try {
+            [hashtable]$itemsHashtable = @{}
 
-            Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
-                if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
+            try {
 
-                    Write-warning "$($Endpoint.ComputerName) has a duplicate entry"
+                Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
+                    if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
 
-                }
-                else {
+                        Write-warning "$($Endpoint.ComputerName) has a duplicate entry"
 
-                    $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint.DeviceId )
+                    }
+                    else {
 
-                } #if/else
-            } #Get-PSSophosCentralAllEndpoints
+                        $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint)
 
-        }
-        catch {
+                    } #if/else
+                } #Get-PSSophosCentralAllEndpoints
 
-            Throw $_.exception.message
+            }
+            catch {
 
-        } #try/catch
+                Throw $_.exception.message
+
+            } #try/catch
+
+        } #if
 
         #endregion
 
@@ -119,8 +123,9 @@ function Get-PSSophosCentralEndpoint {
             if ($PSBoundParameters.ContainsKey("computername")) {
 
                 write-verbose "Getting ID for [$computername]"
-                $endpointId = $itemsHashtable[$computername]
-                Write-Verbose "endpoint id: [$endpointId]"
+                $endpoint = $itemsHashtable[$computername]
+                $endpointid = $endpoint.Deviceid
+                Write-Verbose "endpoint id: [$endpointid]"
 
             } #if
 
@@ -138,23 +143,32 @@ function Get-PSSophosCentralEndpoint {
             #endregion
 
             #region API request
+            if ($endpointId -ne "") {
 
-            $url = "{0}/endpoint/v1/endpoints/{1}" -f $script:dataregion, $endpointId
+                $url = "{0}/endpoint/v1/endpoints/{1}" -f $script:dataregion, $endpointId
 
-            # Add view query to the request if specified
-            if ($query) {
-                $url = $url + $query
-            } #if
-            Write-Verbose "URI: [$url]"
-            Write-Verbose "Dataregion [$($script:dataregion)]"
+                # Add view query to the request if specified
+                if ($query) {
+                    $url = $url + $query
+                } #if
+                Write-Verbose "URI: [$url]"
+                Write-Verbose "Dataregion [$($script:dataregion)]"
 
-            $invokeRestMethodSplat = @{
-                Uri     = $url
-                Method  = 'GET'
-                Headers = $headers
+                $invokeRestMethodSplat = @{
+                    Uri     = $url
+                    Method  = 'GET'
+                    Headers = $headers
+                }
+
+                Invoke-RestMethod @invokeRestMethodSplat
+
             }
+            else {
 
-            Invoke-RestMethod @invokeRestMethodSplat
+                write-error "Cannot find an endpoint with name: $computername under: $script:dataregion"
+
+            } #if/else
+
             #endregion
         }
         catch {
