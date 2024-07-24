@@ -44,7 +44,7 @@ function Connect-PSSophosCentral {
     )
 
     process {
-        $body = "grant_type=client_credentials&scope=token&client_id=$clientid&client_secret=$clientsecret"
+        $body = "grant_type=client_credentials&scope=token&client_id={0}&client_secret={1}" -f $clientid, $clientsecret
         $headers = @{"Content-Type" = "application/x-www-form-urlencoded" }
 
         try {
