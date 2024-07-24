@@ -1,5 +1,5 @@
 function Get-PSSophosCentralAllEndpoints {
-<#
+    <#
 .SYNOPSIS
 Get all the endpoints for the specified tenant.
 
@@ -8,9 +8,19 @@ This could be used for caching data to be able to search an array or list for a 
 Returns a PSCustomobject of some of the properties from Sophos Central Endpoints
 
 .EXAMPLE
-$AllEndpoints = Get-PSSophosCentralAllEndpoints -Verbose
-$AllEndpoints | Where-Object -FilterScript {$_.deviceid -eq 'fe5e0ec6-1e32-4680-a36e-f66683b6a2e5'}
-An example
+Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
+    if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
+
+        Write-warning "$($Endpoint.ComputerName) has a duplicate entry"
+
+    }
+    else {
+
+        $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint)
+
+    } #if/else
+} #Get-PSSophosCentralAllEndpoints
+Using this command to cache endpoint data
 
 .NOTES
 General notes
@@ -32,14 +42,14 @@ General notes
         #The Items node contains all the device info
         $epresponse.items | ForEach-Object {
             [PSCustomObject]@{
-                ComputerName = $_.hostname
-                health = $_.health.overall
-                lastSeenAt = $_.lastSeenAt
-                OperatingSystem = $_.os.name
-                tamperProtectionEnabled =$_.tamperProtectionEnabled
-                type = $_.type
-                group = $_.group.name
-                Deviceid = $_.id
+                ComputerName            = $_.hostname
+                health                  = $_.health.overall
+                lastSeenAt              = $_.lastSeenAt
+                OperatingSystem         = $_.os.name
+                tamperProtectionEnabled = $_.tamperProtectionEnabled
+                type                    = $_.type
+                group                   = $_.group.name
+                Deviceid                = $_.id
             } #PSCustomObject
         } #ForEach-Object
 
