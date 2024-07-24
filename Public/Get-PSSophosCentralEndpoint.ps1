@@ -21,34 +21,14 @@ function Get-PSSophosCentralEndpoint {
     https://developer.sophos.com/docs/endpoint-v1/1/routes/endpoints/%7BendpointId%7D/get
     https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/invoke-restmethod?view=powershell-7.4
     #>
-    [CmdletBinding(DefaultParameterSetName = "Basic")]
+    [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param (
         # The ID of the device in Sophos Central
-        [Parameter(ParameterSetName = 'endpointId', Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [string]
         [Alias("Id")]
-        $endpointId,
-
-        [Parameter(ParameterSetName = 'computername', Mandatory = $true, ValueFromPipeline)]
-        [string[]]
-        [Alias("Hostname")]
-        $computername,
-
-        [Parameter(ParameterSetName = 'Full')]
-        [Parameter(ParameterSetName = 'computername')]
-        [Parameter(ParameterSetName = 'endpointId')]
-        [switch]$Full,
-
-        [Parameter(ParameterSetName = 'Summary')]
-        [Parameter(ParameterSetName = 'computername')]
-        [Parameter(ParameterSetName = 'endpointId')]
-        [switch]$Summary,
-
-        [Parameter(ParameterSetName = 'Basic')]
-        [Parameter(ParameterSetName = 'computername')]
-        [Parameter(ParameterSetName = 'endpointId')]
-        [switch]$Basic
+        $endpointId
     )
 
     begin {
@@ -69,50 +49,9 @@ function Get-PSSophosCentralEndpoint {
         $headers = @{
             "Authorization" = "Bearer $script:token"
             "X-Tenant-ID"   = $script:TenantID
+            "Accept"        = "application/json"
         }
         Write-Verbose "[BEGIN ] $headers"
-        #endregion
-
-        # Cache Hostname and DeviceIDs to search through later
-
-        #region hashtable
-
-        #Output parameters
-        $PSBoundParameters.Keys | ForEach-Object {
-            $message = 'Key: {0}, Value: {1}' -f $_, $PSBoundParameters[$_]
-            Write-Verbose $message
-        }
-
-        if (-not $itemsHashtable) {
-
-            Write-Verbose "Creating cache of Endpoint IDs"
-
-            [hashtable]$itemsHashtable = @{}
-
-            try {
-
-                Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
-                    if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
-
-                        Write-warning "$($Endpoint.ComputerName) has a duplicate entry"
-
-                    }
-                    else {
-
-                        $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint)
-
-                    } #if/else
-                } #Get-PSSophosCentralAllEndpoints
-
-            }
-            catch {
-
-                Throw $_.exception.message
-
-            } #try/catch
-
-        } #if
-
         #endregion
 
     } #begin
@@ -120,56 +59,21 @@ function Get-PSSophosCentralEndpoint {
     process {
         Write-Verbose "[PROCESS] Starting: $($MyInvocation.Mycommand)"
         try {
-            #region Get EndpointID
-
-            if ($PSBoundParameters.ContainsKey("computername")) {
-
-                write-verbose "Getting ID for [$computername]"
-                $endpoint = $itemsHashtable[$computername]
-                $endpointid = $endpoint.Deviceid
-                Write-Verbose "endpoint id: [$endpointid]"
-
-            } #if
-
-            #endregion
-
-            #region view
-
-            Switch ($PSCmdlet.ParameterSetName) {
-                "Full" { $query = "?view=full" }
-                "Basic" { $query = "?view=Basic" }
-                "Summary" { $query = "?view=Summary" }
-
-            } #switch
-
-            #endregion
 
             #region API request
-            if ($endpointId -ne "") {
 
-                $url = "{0}/endpoint/v1/endpoints/{1}" -f $script:dataregion, $endpointId
+            $url = "{0}/endpoint/v1/endpoints/{1}?view=full" -f $script:dataregion, $endpointId
 
-                # Add view query to the request if specified
-                if ($query) {
-                    $url = $url + $query
-                } #if
-                Write-Verbose "URI: [$url]"
-                Write-Verbose "Dataregion [$($script:dataregion)]"
+            Write-Verbose "URI: [$url]"
+            Write-Verbose "Dataregion [$($script:dataregion)]"
 
-                $invokeRestMethodSplat = @{
-                    Uri     = $url
-                    Method  = 'GET'
-                    Headers = $headers
-                }
-
-                Invoke-RestMethod @invokeRestMethodSplat
-
+            $invokeRestMethodSplat = @{
+                Uri     = $url
+                Method  = 'GET'
+                Headers = $headers
             }
-            else {
 
-                write-error "Cannot find an endpoint with name: $computername under: $script:dataregion"
-
-            } #if/else
+            Invoke-RestMethod @invokeRestMethodSplat
 
             #endregion
         }
