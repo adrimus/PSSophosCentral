@@ -79,7 +79,7 @@ function Get-PSSophosCentralEndpoint {
         }
         catch {
 
-            write-error "Error with request: [$($_.message)]"
+            write-error "Error with request for ID: $endpointId : [$($_.exception.message)]"
 
         } #try/catch
 
