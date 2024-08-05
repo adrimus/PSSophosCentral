@@ -38,7 +38,8 @@ function Set-PSSophosCentralTamperProtection {
 
         # Parameter help description
         [Parameter(Mandatory = $true)]
-        [bool]
+        [string]
+        [ValidateSet ("Yes","No")]
         [alias("Enable")]
         $IsEnabled
     )
@@ -53,10 +54,17 @@ function Set-PSSophosCentralTamperProtection {
             "Accept"        = "application/json"
         }
 
-        $body = @{ "enabled" = $enable } | ConvertTo-Json
+        if ($IsEnabled -eq "Yes" ) {
+            $enable = $true
+        } else {
+            $enable = $false
+        } #if/else
+        $body = @{ "enabled" =  $enable } | ConvertTo-Json
 
         Write-Verbose "[BEGIN ] $headers"
         Write-Verbose "[BEGIN ] $body"
+
+        Write-information $body -Tags meta
         #endregion
     } #begin
 
