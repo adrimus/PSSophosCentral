@@ -44,7 +44,7 @@ General notes
         }
         $url = "{0}/endpoint/v1/endpoints?pageSize=500&pageTotal=true&view=summary" -f $dataregion
 
-        if ($PSBoundParameters.ContainsValue("healthStatus")) {
+        if ($PSBoundParameters.ContainsKey("healthStatus")) {
             $url = $url +  "&healthStatus=$healthStatus"
         }
         $epresponse = Invoke-RestMethod -Uri $url -Method Get -Headers $headers
