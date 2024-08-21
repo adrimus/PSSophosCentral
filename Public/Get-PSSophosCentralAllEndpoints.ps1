@@ -9,17 +9,18 @@ Returns a PSCustomobject of some of the properties from Sophos Central Endpoints
 
 .EXAMPLE
 Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
+
     if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
 
+        $itemsHashtable[$Endpoint.ComputerName] = @($itemsHashtable[$Endpoint.ComputerName],$Endpoint)
         Write-warning "$($Endpoint.ComputerName) has a duplicate entry"
 
-    }
-    else {
+    } else {
 
         $itemsHashtable.Add( $Endpoint.ComputerName, $Endpoint)
 
     } #if/else
-} #Get-PSSophosCentralAllEndpoints
+}
 Using this command to cache endpoint data
 
 .NOTES
@@ -28,6 +29,11 @@ General notes
     [CmdletBinding()]
     [OutputType([PSCustomObject])]
     param (
+        # Parameter help description
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("bad", "good", "suspicious", "unknown")]
+        [string]
+        $healthStatus
 
     )
 
@@ -37,6 +43,10 @@ General notes
             "X-Tenant-ID"   = $script:TenantID
         }
         $url = "{0}/endpoint/v1/endpoints?pageSize=500&pageTotal=true&view=summary" -f $dataregion
+
+        if ($PSBoundParameters.ContainsValue("healthStatus")) {
+            $url = $url +  "&healthStatus=$healthStatus"
+        }
         $epresponse = Invoke-RestMethod -Uri $url -Method Get -Headers $headers
 
         #The Items node contains all the device info
