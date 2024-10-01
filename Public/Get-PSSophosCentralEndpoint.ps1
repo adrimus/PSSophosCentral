@@ -42,6 +42,10 @@ function Get-PSSophosCentralEndpoint {
             throw "Authentication needed. Please call Connect-PSSophosCentral."
         }
 
+        if (-not ($script:dataregion)) {
+            throw "Data region not set. Please set the data region."
+        }
+
         #endregion
 
         #region Header
