@@ -8,6 +8,10 @@ This could be used for caching data to be able to search an array or list for a 
 Returns a PSCustomobject of some of the properties from Sophos Central Endpoints
 
 .EXAMPLE
+# Initiate hashtable
+[hashtable]$itemsHashtable = @{}
+
+# Populate hashtable
 Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Process {
 
     if ($itemsHashtable.Contains($Endpoint.ComputerName)) {
@@ -21,8 +25,18 @@ Get-PSSophosCentralAllEndpoints -PipelineVariable Endpoint | ForEach-Object -Pro
 
     } #if/else
 }
-Using this command to cache endpoint data
 
+Using this command to cache endpoint data
+.EXAMPLE
+$itemsHashtable.GetEnumerator() | ForEach-Object {
+    $key = $_.Key
+    $value = $_.Value
+
+$object = [pscustomobject]$value
+$object
+} |Out-ConsoleGridView
+
+ After you have the hashtable from the previous example you can create objects from each item and pipe that to grid view
 .NOTES
 General notes
 #>
