@@ -66,13 +66,13 @@ function Get-PSSophosCentralEndpoint {
 
             #region API request
 
-            $url = "{0}/endpoint/v1/endpoints/{1}?view=full" -f $script:dataregion, $endpointId
+            $uri = "{0}/endpoint/v1/endpoints/{1}?view=full" -f $script:dataregion, $endpointId
 
             Write-Verbose "URI: [$url]"
             Write-Verbose "Dataregion [$($script:dataregion)]"
 
             $invokeRestMethodSplat = @{
-                Uri     = $url
+                Uri     = $uri
                 Method  = 'GET'
                 Headers = $headers
             }
